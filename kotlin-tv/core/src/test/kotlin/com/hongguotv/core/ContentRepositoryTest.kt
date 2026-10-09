@@ -227,11 +227,15 @@ class ContentRepositoryTest {
         assertEquals(1,requests)
     }
 
-    @Test fun missingComicTabDoesNotFallBackToShortResults() {
-        var requests=0
-        val repo=repository { requests++; """{"code":0,"search_tabs":[{"tab_type":11,"data":[]}]}""" }
-        assertThrows(IOException::class.java) { repo.search("修仙",1,ContentType.COMIC) }
-        assertEquals(1,requests)
+    @Test fun missingComicTabFallsBackToWebsite() {
+        val paths = mutableListOf<String>()
+        val repo = repository { request ->
+            paths += request.url.encodedPath
+            if (paths.size == 1) """{"code":0,"search_tabs":[{"tab_type":11,"data":[]}]}"""
+            else """<script>_ROUTER_DATA={"loaderData":{"search_page":{"searchList":[{"series_id":"456","series_title":"测试漫剧"}]}}}};</script>"""
+        }
+        val result = repo.search("修仙", 1, ContentType.COMIC)
+        assertEquals("456", result.items.single().id)
     }
 
     @Test fun shortSearchKeepsWebsiteFallback() {

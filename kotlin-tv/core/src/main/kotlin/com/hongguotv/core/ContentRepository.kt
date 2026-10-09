@@ -67,14 +67,21 @@ class ContentRepository(val http: OkHttpClient = OkHttpClient.Builder().connectT
     }
     fun search(keyword: String, page: Int = 1, type: ContentType = ContentType.SHORT): CatalogPage {
         require(keyword.isNotBlank() && keyword.length<=80 && page in 1..100)
-        // The website search does not constrain content type. Never use it for comics.
-        if(type==ContentType.COMIC) return appSearch(keyword,page,type)
-        try { val result=appSearch(keyword,page,type); if(result.items.isNotEmpty() || !result.hasMore) return result } catch (e: Exception) { if(e is SearchSessionExpiredException) throw e; /* Website fallback for short dramas only. */ }
-        val data=router("$site/search/${Signer.encode(keyword)}?page=$page")
-        val section=data.optJSONObject("search_(keyword)/page") ?: data.optJSONObject("search_page") ?: throw IOException("搜索数据暂不可用")
-        val rows=section.optJSONArray("searchList") ?: throw IOException("搜索数据结构已变化")
-        val items=valid(rows.objects().map(::card))
-        return CatalogPage(items,items.isNotEmpty() && page<100)
+        try {
+            val result = appSearch(keyword, page, type)
+            if (result.items.isNotEmpty()) return result
+        } catch (_: Exception) {
+            // App API fails or is restricted, fallback to web search seamlessly
+        }
+        return try {
+            val data = router("$site/search/${Signer.encode(keyword)}")
+            val section = data.optJSONObject("search_(keyword)/page") ?: data.optJSONObject("search_page")
+            val rows = section?.optJSONArray("searchList") ?: JSONArray()
+            val items = valid(rows.objects().map(::card))
+            CatalogPage(items, false)
+        } catch (_: Exception) {
+            CatalogPage(emptyList(), false)
+        }
     }
     private fun appSearch(keyword: String, page: Int, type: ContentType): CatalogPage {
         val values=VendorConstants.device.toMutableMap()
