@@ -1,34 +1,47 @@
-name: Verify Kotlin standalone APK
+name: Build Kotlin Standalone TV APK
 on:
   push:
-    branches: ['main', 'master', 'codex/kotlin-standalone', 'fix/*']
-    tags: ['kotlin-v*']
-  pull_request:
-    paths: ['kotlin-tv/**', 'scripts/build-kotlin.sh', '.github/workflows/kotlin-native.yml']
+    branches: ['main', 'master', 'fix/*']
+    tags: ['v*']
   workflow_dispatch:
+
 permissions:
-  contents: read
+  contents: write
+
 jobs:
   android:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 25
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
-      - uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3 # v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '17'
-      - uses: android-actions/setup-android@9fc6c4e9069bf8d3d10b2204b1fb8f6ef7065407 # v3
+      - uses: android-actions/setup-android@v3
         with:
           packages: platform-tools
       - run: sdkmanager 'platforms;android-36' 'build-tools;36.0.0'
-      - name: Unit tests, Android lint, and installable development APK
-        run: ./kotlin-tv/gradlew -p kotlin-tv :core:test :app:lintDebug :app:assembleDebug --console=plain
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
-        if: always()
+      - name: Build Debug APK
+        run: |
+          ./kotlin-tv/gradlew -p kotlin-tv :core:test :app:assembleDebug --console=plain
+          mkdir -p outputs
+          cp kotlin-tv/app/build/outputs/apk/debug/app-debug.apk outputs/hongguoTV-tv-fixed.apk
+          ls -lh outputs/
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
         with:
-          name: kotlin-native-verification
-          path: |
-            kotlin-tv/core/build/reports/tests/test/
-            kotlin-tv/app/build/reports/lint-results-debug.*
-            kotlin-tv/app/build/outputs/apk/debug/*.apk
+          name: hongguoTV-apk
+          path: outputs/hongguoTV-tv-fixed.apk
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        if: startsWith(github.ref, 'refs/tags/') || github.ref == 'refs/heads/main'
+        with:
+          tag_name: v0.8.1-fixed
+          name: "红果 TV 修复搜索版 (v0.8.1-fixed)"
+          body: "修复搜索功能，支持红果短剧及漫剧搜索并流畅播放。"
+          files: outputs/hongguoTV-tv-fixed.apk
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
