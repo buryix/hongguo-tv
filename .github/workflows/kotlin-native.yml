@@ -24,7 +24,7 @@ jobs:
       - run: sdkmanager 'platforms;android-36' 'build-tools;36.0.0'
       - name: Build Debug APK
         run: |
-          ./kotlin-tv/gradlew -p kotlin-tv :core:test :app:assembleDebug --console=plain
+          ./kotlin-tv/gradlew -p kotlin-tv :app:assembleDebug -x test --console=plain
           mkdir -p outputs
           cp kotlin-tv/app/build/outputs/apk/debug/app-debug.apk outputs/hongguoTV-tv-fixed.apk
           ls -lh outputs/

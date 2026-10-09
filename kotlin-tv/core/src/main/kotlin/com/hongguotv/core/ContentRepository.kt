@@ -70,7 +70,8 @@ class ContentRepository(val http: OkHttpClient = OkHttpClient.Builder().connectT
         try {
             val result = appSearch(keyword, page, type)
             if (result.items.isNotEmpty()) return result
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            if (e is SearchSessionExpiredException) throw e
             // App API fails or is restricted, fallback to web search seamlessly
         }
         return try {
