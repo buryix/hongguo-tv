@@ -1,7 +1,7 @@
 name: Verify Kotlin standalone APK
 on:
   push:
-    branches: ['codex/kotlin-standalone']
+    branches: ['main', 'master', 'codex/kotlin-standalone', 'fix/*']
     tags: ['kotlin-v*']
   pull_request:
     paths: ['kotlin-tv/**', 'scripts/build-kotlin.sh', '.github/workflows/kotlin-native.yml']
